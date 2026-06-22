@@ -463,7 +463,11 @@ function updateLeaderboard() {
     removeButton.title = `Delete ${reader.name}`;
     removeButton.textContent = "Delete";
 
-    row.append(place, details, score, goalsButton, updateButton, removeButton);
+    const actions = document.createElement("span");
+    actions.className = "reader-actions";
+    actions.append(goalsButton, updateButton, removeButton);
+
+    row.append(place, details, score, actions);
     leaderboardList.append(row);
   });
 
