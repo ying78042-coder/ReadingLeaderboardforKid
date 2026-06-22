@@ -454,7 +454,7 @@ button {
 
 .leader-row {
   display: grid;
-  grid-template-columns: 48px 1fr auto auto auto;
+  grid-template-columns: 48px minmax(0, 1fr) auto auto;
   gap: 12px;
   align-items: center;
   min-height: 76px;
@@ -508,7 +508,15 @@ button {
   font-weight: 950;
 }
 
+.reader-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
 .goals-reader-button,
+.update-reader-button,
 .remove-reader-button {
   min-height: 36px;
   padding: 0 12px;
@@ -524,6 +532,16 @@ button {
 
 .goals-reader-button:hover {
   background: #ddecfb;
+}
+
+.update-reader-button {
+  border: 1px solid #cfcb93;
+  background: #fff8d6;
+  color: #755600;
+}
+
+.update-reader-button:hover {
+  background: #fff0ad;
 }
 
 .remove-reader-button {
@@ -583,6 +601,12 @@ button {
 .modal-form {
   display: grid;
   gap: 14px;
+}
+
+.subject-record-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .subject-actions {
@@ -666,9 +690,21 @@ button {
   }
 
   .goals-reader-button,
+  .update-reader-button,
   .remove-reader-button {
-    grid-column: 2;
     width: 100%;
+  }
+
+  .reader-actions {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    white-space: normal;
+  }
+
+  .subject-record-grid {
+    grid-template-columns: 1fr;
   }
 
   .modal-card .form-actions {
