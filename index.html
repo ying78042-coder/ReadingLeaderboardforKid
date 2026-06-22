@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reading Leaderboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="setup-panel" aria-labelledby="page-title">
+        <div class="brand-row">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <p>Reading Club</p>
+        </div>
+
+        <div class="intro-copy">
+          <h1 id="page-title">Join the reading leaderboard</h1>
+          <p>Add your reader, choose goals, and see today’s climb.</p>
+        </div>
+
+        <form id="reader-form" class="reader-form">
+          <fieldset>
+            <legend>Reader</legend>
+            <label>
+              Name
+              <input id="reader-name" name="reader-name" type="text" maxlength="24" placeholder="Avery" required />
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Reading goals</legend>
+            <div class="subject-goal-grid" aria-label="Subject goals">
+              <div class="subject-goal-group">
+                <h3>English</h3>
+                <label>
+                  Workday
+                  <input id="english-workday-goal" type="number" min="0" max="240" step="5" value="20" required />
+                </label>
+                <label>
+                  Weekend
+                  <input id="english-weekend-goal" type="number" min="0" max="240" step="5" value="30" required />
+                </label>
+              </div>
+              <div class="subject-goal-group">
+                <h3>Chinese</h3>
+                <label>
+                  Workday
+                  <input id="chinese-workday-goal" type="number" min="0" max="240" step="5" value="20" required />
+                </label>
+                <label>
+                  Weekend
+                  <input id="chinese-weekend-goal" type="number" min="0" max="240" step="5" value="30" required />
+                </label>
+              </div>
+              <div class="subject-goal-group">
+                <h3>Math</h3>
+                <label>
+                  Workday
+                  <input id="math-workday-goal" type="number" min="0" max="240" step="5" value="20" required />
+                </label>
+                <label>
+                  Weekend
+                  <input id="math-weekend-goal" type="number" min="0" max="240" step="5" value="30" required />
+                </label>
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="form-actions">
+            <button type="button" id="reset-button" class="secondary-button">Reset</button>
+            <button type="submit" class="primary-button">Add me</button>
+          </div>
+        </form>
+
+        <section class="timer-panel" aria-labelledby="timer-title">
+          <div>
+            <p class="eyebrow">Reading timer</p>
+            <h2 id="timer-title">Session</h2>
+          </div>
+          <label>
+            Reader name
+            <select id="timer-reader-name">
+              <option value="">Choose a reader</option>
+            </select>
+          </label>
+          <div id="timer-display" class="timer-display" aria-live="polite">00:00:00</div>
+          <p id="timer-status" class="timer-status" aria-live="polite">Ready</p>
+          <div class="form-actions">
+            <button type="button" id="start-timer-button" class="primary-button">Start</button>
+            <button type="button" id="stop-timer-button" class="secondary-button" disabled>Stop</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="board-panel" aria-labelledby="leaderboard-title">
+        <div class="shelf-art" aria-hidden="true">
+          <div class="sun"></div>
+          <div class="book-stack stack-one"></div>
+          <div class="book-stack stack-two"></div>
+          <div class="book-stack stack-three"></div>
+        </div>
+
+        <div class="board-header">
+          <div>
+            <p class="eyebrow">Live board</p>
+            <h2 id="leaderboard-title">Leaderboard</h2>
+          </div>
+          <div class="board-tools">
+            <label class="date-picker">
+              Date
+              <input id="progress-date" type="date" />
+            </label>
+            <div id="reader-rank" class="rank-pill">Add a reader</div>
+          </div>
+        </div>
+
+        <div class="progress-strip" aria-label="Goal progress">
+          <article>
+            <span>Daily</span>
+            <strong id="daily-progress-text">0 / 20 min</strong>
+            <div class="meter"><span id="daily-meter"></span></div>
+          </article>
+          <article>
+            <span>Weekly</span>
+            <strong id="weekly-progress-text">0 / 120 min</strong>
+            <div class="meter"><span id="weekly-meter"></span></div>
+          </article>
+        </div>
+
+        <div class="subject-strip" aria-label="Daily and weekly subject reading time">
+          <article>
+            <span>Daily English</span>
+            <strong id="daily-english-time-text">0 min</strong>
+          </article>
+          <article>
+            <span>Daily Chinese</span>
+            <strong id="daily-chinese-time-text">0 min</strong>
+          </article>
+          <article>
+            <span>Daily Math</span>
+            <strong id="daily-math-time-text">0 min</strong>
+          </article>
+          <article>
+            <span>Weekly English</span>
+            <strong id="weekly-english-time-text">0 min</strong>
+          </article>
+          <article>
+            <span>Weekly Chinese</span>
+            <strong id="weekly-chinese-time-text">0 min</strong>
+          </article>
+          <article>
+            <span>Weekly Math</span>
+            <strong id="weekly-math-time-text">0 min</strong>
+          </article>
+        </div>
+
+        <ol id="leaderboard-list" class="leaderboard-list" aria-live="polite"></ol>
+      </section>
+    </main>
+
+    <div id="goals-modal" class="modal-backdrop" hidden>
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="goals-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Update goals</p>
+            <h2 id="goals-modal-title">Daily goals</h2>
+          </div>
+          <button type="button" id="close-goals-modal" class="icon-button" aria-label="Close goals dialog">×</button>
+        </div>
+
+        <form id="goals-modal-form" class="modal-form">
+          <input id="goals-reader-name" type="hidden" />
+          <div class="subject-goal-grid" aria-label="Selected reader subject goals">
+            <div class="subject-goal-group">
+              <h3>English</h3>
+              <label>
+                Workday
+                <input id="modal-english-workday-goal" type="number" min="0" max="240" step="5" required />
+              </label>
+              <label>
+                Weekend
+                <input id="modal-english-weekend-goal" type="number" min="0" max="240" step="5" required />
+              </label>
+            </div>
+            <div class="subject-goal-group">
+              <h3>Chinese</h3>
+              <label>
+                Workday
+                <input id="modal-chinese-workday-goal" type="number" min="0" max="240" step="5" required />
+              </label>
+              <label>
+                Weekend
+                <input id="modal-chinese-weekend-goal" type="number" min="0" max="240" step="5" required />
+              </label>
+            </div>
+            <div class="subject-goal-group">
+              <h3>Math</h3>
+              <label>
+                Workday
+                <input id="modal-math-workday-goal" type="number" min="0" max="240" step="5" required />
+              </label>
+              <label>
+                Weekend
+                <input id="modal-math-weekend-goal" type="number" min="0" max="240" step="5" required />
+              </label>
+            </div>
+          </div>
+          <p id="goals-modal-message" class="modal-message" aria-live="polite"></p>
+          <div class="form-actions">
+            <button type="button" id="cancel-goals-update" class="secondary-button">Cancel</button>
+            <button type="submit" class="primary-button">Save goals</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div id="subject-modal" class="modal-backdrop" hidden>
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="subject-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Choose subject</p>
+            <h2 id="subject-modal-title">Start session</h2>
+          </div>
+          <button type="button" id="close-subject-modal" class="icon-button" aria-label="Close subject dialog">×</button>
+        </div>
+
+        <div class="subject-actions" aria-label="Subject choices">
+          <button type="button" class="subject-button" data-subject="English">English</button>
+          <button type="button" class="subject-button" data-subject="Chinese">Chinese</button>
+          <button type="button" class="subject-button" data-subject="Math">Math</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
