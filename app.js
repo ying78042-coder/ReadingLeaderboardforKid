@@ -23,6 +23,11 @@ const startTimerButton = document.querySelector("#start-timer-button");
 const stopTimerButton = document.querySelector("#stop-timer-button");
 const subjectModal = document.querySelector("#subject-modal");
 const closeSubjectModalButton = document.querySelector("#close-subject-modal");
+const recordModal = document.querySelector("#record-modal");
+const recordModalForm = document.querySelector("#record-modal-form");
+const closeRecordModalButton = document.querySelector("#close-record-modal");
+const cancelRecordUpdateButton = document.querySelector("#cancel-record-update");
+const recordModalMessage = document.querySelector("#record-modal-message");
 
 const fields = {
   name: document.querySelector("#reader-name"),
@@ -46,6 +51,17 @@ const goalsModalFields = {
         workday: document.querySelector(`#modal-${subject.toLowerCase()}-workday-goal`),
         weekend: document.querySelector(`#modal-${subject.toLowerCase()}-weekend-goal`),
       },
+    ]),
+  ),
+};
+
+const recordModalFields = {
+  name: document.querySelector("#record-reader-name"),
+  date: document.querySelector("#record-date"),
+  subjectMinutes: Object.fromEntries(
+    SUBJECTS.map((subject) => [
+      subject,
+      document.querySelector(`#record-${subject.toLowerCase()}-minutes`),
     ]),
   ),
 };
@@ -339,6 +355,19 @@ function getSubjectTotals(reader, dateKey = selectedDateKey) {
   return totals;
 }
 
+function getDailySubjectMinutes(reader, dateKey = selectedDateKey) {
+  return getSubjectTotals(reader, dateKey).daily;
+}
+
+function readSubjectMinutes(source) {
+  return Object.fromEntries(
+    SUBJECTS.map((subject) => [
+      subject,
+      Math.max(0, readNumber(source.subjectMinutes[subject], 0)),
+    ]),
+  );
+}
+
 function updateSubjectProgress(reader = getCurrentReader(), dateKey = selectedDateKey) {
   const totals = getSubjectTotals(reader, dateKey);
   const goals = getSubjectGoals(reader);
@@ -418,6 +447,14 @@ function updateLeaderboard() {
     goalsButton.title = `Update reading goals for ${reader.name}`;
     goalsButton.textContent = "Goals";
 
+    const updateButton = document.createElement("button");
+    updateButton.className = "update-reader-button";
+    updateButton.type = "button";
+    updateButton.dataset.readerId = reader.id;
+    updateButton.setAttribute("aria-label", `Update reading record for ${reader.name}`);
+    updateButton.title = `Update reading record for ${reader.name}`;
+    updateButton.textContent = "Update";
+
     const removeButton = document.createElement("button");
     removeButton.className = "remove-reader-button";
     removeButton.type = "button";
@@ -426,7 +463,7 @@ function updateLeaderboard() {
     removeButton.title = `Delete ${reader.name}`;
     removeButton.textContent = "Delete";
 
-    row.append(place, details, score, goalsButton, removeButton);
+    row.append(place, details, score, goalsButton, updateButton, removeButton);
     leaderboardList.append(row);
   });
 
@@ -487,6 +524,26 @@ function closeGoalsModal() {
   goalsModalMessage.textContent = "";
 }
 
+function openRecordModal(reader) {
+  state.currentReaderId = reader.id;
+  render();
+
+  recordModalFields.name.value = reader.name;
+  recordModalFields.date.value = selectedDateKey;
+  const subjectMinutes = getDailySubjectMinutes(reader, selectedDateKey);
+  SUBJECTS.forEach((subject) => {
+    recordModalFields.subjectMinutes[subject].value = subjectMinutes[subject];
+  });
+  recordModalMessage.textContent = "";
+  recordModal.hidden = false;
+  recordModalFields.subjectMinutes.English.focus();
+}
+
+function closeRecordModal() {
+  recordModal.hidden = true;
+  recordModalMessage.textContent = "";
+}
+
 function configureServerOnlyControls() {
   resetButton.hidden = !isServerSideBrowser();
 }
@@ -533,6 +590,20 @@ async function updateGoals(readerName, goals) {
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.error ?? "Unable to update goals");
+  }
+  return response.json();
+}
+
+async function updateReadingRecord(readerName, recordDate, subjectMinutes) {
+  const response = await fetch(`${API_URL}/${encodeURIComponent(readerName)}/today`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ recordDate, subjectMinutes }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error ?? "Unable to update reading record");
   }
   return response.json();
 }
@@ -672,6 +743,13 @@ leaderboardList.addEventListener("click", async (event) => {
     return;
   }
 
+  const updateButton = event.target.closest(".update-reader-button");
+  if (updateButton) {
+    const reader = state.readers.find((item) => item.id === updateButton.dataset.readerId);
+    if (reader) openRecordModal(reader);
+    return;
+  }
+
   const button = event.target.closest(".remove-reader-button");
   if (button) {
     try {
@@ -744,6 +822,36 @@ goalsModal.addEventListener("click", (event) => {
   if (event.target === goalsModal) closeGoalsModal();
 });
 
+recordModalForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  try {
+    const recordDate = recordModalFields.date.value || selectedDateKey;
+    const data = await updateReadingRecord(
+      recordModalFields.name.value,
+      recordDate,
+      readSubjectMinutes(recordModalFields),
+    );
+    state = {
+      currentReaderId: data.currentReaderId,
+      readers: data.readers,
+    };
+    selectedDateKey = recordDate;
+    if (progressDate) progressDate.value = recordDate;
+    render();
+    closeRecordModal();
+    readerRank.textContent = "Record updated";
+  } catch (error) {
+    recordModalMessage.textContent = getErrorMessage(error, "Update failed");
+  }
+});
+
+closeRecordModalButton.addEventListener("click", closeRecordModal);
+cancelRecordUpdateButton.addEventListener("click", closeRecordModal);
+recordModal.addEventListener("click", (event) => {
+  if (event.target === recordModal) closeRecordModal();
+});
+
 subjectModal.addEventListener("click", (event) => {
   if (event.target === subjectModal) {
     closeSubjectModal();
@@ -759,6 +867,7 @@ closeSubjectModalButton.addEventListener("click", closeSubjectModal);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !goalsModal.hidden) closeGoalsModal();
   if (event.key === "Escape" && !subjectModal.hidden) closeSubjectModal();
+  if (event.key === "Escape" && !recordModal.hidden) closeRecordModal();
 });
 
 if (progressDate) {
