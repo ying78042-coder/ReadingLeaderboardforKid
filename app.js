@@ -75,6 +75,7 @@ let timerStartedAt = null;
 let timerInterval = null;
 let timerSavedMinutes = 0;
 let timerSaving = false;
+let timerStopping = false;
 let timerActiveReaderName = "";
 let timerActiveSubject = "";
 let selectedDateKey = getLocalDateKey();
@@ -205,8 +206,8 @@ function formatDuration(milliseconds) {
 }
 
 function setTimerRunning(isRunning) {
-  startTimerButton.disabled = isRunning || !state.readers.length;
-  stopTimerButton.disabled = !isRunning;
+  startTimerButton.disabled = isRunning || timerStopping || !state.readers.length;
+  stopTimerButton.disabled = !isRunning || timerStopping;
 }
 
 function updateTimerDisplay() {
@@ -222,6 +223,8 @@ function closeSubjectModal() {
 }
 
 function startTimerForSubject(subject) {
+  if (timerStartedAt || timerStopping) return;
+
   const name = timerReaderName.value.trim();
   if (!name) {
     timerReaderName.focus();
@@ -243,12 +246,12 @@ function startTimerForSubject(subject) {
   }, 1000);
 }
 
-async function saveTimerMinutes(readerName, minutes, successMessage) {
-  if (timerSaving || minutes <= 0) return false;
+async function saveTimerMinutes(readerName, minutes, subject, successMessage) {
+  if (timerSaving || minutes <= 0 || !subject) return false;
 
   timerSaving = true;
   try {
-    const data = await addReadingSession(readerName, minutes, timerActiveSubject);
+    const data = await addReadingSession(readerName, minutes, subject);
     state = {
       currentReaderId: data.currentReaderId,
       readers: data.readers,
@@ -265,14 +268,14 @@ async function saveTimerMinutes(readerName, minutes, successMessage) {
 }
 
 async function autosaveTimerProgress() {
-  if (!timerStartedAt) return;
+  if (!timerStartedAt || timerStopping) return;
 
   const name = timerActiveReaderName;
   const elapsedWholeMinutes = Math.floor((Date.now() - timerStartedAt) / 60000);
   const unsavedMinutes = elapsedWholeMinutes - timerSavedMinutes;
   if (!name || unsavedMinutes <= 0) return;
 
-  const saved = await saveTimerMinutes(name, unsavedMinutes, `Saved ${elapsedWholeMinutes} min so far`);
+  const saved = await saveTimerMinutes(name, unsavedMinutes, timerActiveSubject, `Saved ${elapsedWholeMinutes} min so far`);
   if (saved) {
     timerSavedMinutes += unsavedMinutes;
   }
@@ -449,7 +452,7 @@ function updateTimerReaderOptions() {
   const selectedReader = state.readers.find((reader) => reader.name === selectedName);
   const currentReader = getCurrentReader();
   timerReaderName.value = selectedReader?.name ?? currentReader?.name ?? "";
-  startTimerButton.disabled = !state.readers.length || !!timerStartedAt;
+  startTimerButton.disabled = !state.readers.length || !!timerStartedAt || timerStopping;
 }
 
 function render() {
@@ -605,33 +608,44 @@ startTimerButton.addEventListener("click", () => {
 });
 
 stopTimerButton.addEventListener("click", async () => {
-  if (!timerStartedAt) return;
+  if (!timerStartedAt || timerStopping) return;
 
   const name = timerActiveReaderName;
+  const subject = timerActiveSubject;
   const elapsedMs = Date.now() - timerStartedAt;
 
+  timerStopping = true;
   window.clearInterval(timerInterval);
   timerInterval = null;
-  setTimerRunning(false);
+  setTimerRunning(true);
   await waitForActiveTimerSave();
 
   const elapsedWholeMinutes = Math.floor(elapsedMs / 60000);
   const totalMinutes = timerSavedMinutes > 0 ? elapsedWholeMinutes : Math.max(1, Math.ceil(elapsedMs / 60000));
   const unsavedMinutes = totalMinutes - timerSavedMinutes;
-  const saved = await saveTimerMinutes(name, unsavedMinutes, `Added ${totalMinutes} min total`);
+  const saved =
+    unsavedMinutes > 0
+      ? await saveTimerMinutes(name, unsavedMinutes, subject, `Added ${totalMinutes} min total`)
+      : true;
+
+  if (!saved) {
+    timerStopping = false;
+    setTimerRunning(true);
+    return;
+  }
+
   timerStartedAt = null;
   timerActiveReaderName = "";
   timerActiveSubject = "";
+  timerStopping = false;
   timerReaderName.disabled = false;
   updateTimerDisplay();
   setTimerRunning(false);
 
-  if (saved || unsavedMinutes <= 0) {
-    if (unsavedMinutes <= 0) {
-      timerStatus.textContent = `Added ${timerSavedMinutes} min total`;
-    }
-    timerSavedMinutes = 0;
+  if (unsavedMinutes <= 0) {
+    timerStatus.textContent = `Added ${timerSavedMinutes} min total`;
   }
+  timerSavedMinutes = 0;
 });
 
 if (isServerSideBrowser()) {
