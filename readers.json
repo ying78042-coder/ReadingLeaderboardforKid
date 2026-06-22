@@ -1,0 +1,157 @@
+{
+  "currentReaderId": "reader-mqkvsqf6-qyrf5u95",
+  "readers": [
+    {
+      "id": "reader-mqkvsqf6-qyrf5u95",
+      "name": "Alvin",
+      "favoriteBook": "",
+      "goals": {
+        "daily": 80,
+        "dailyWorkday": 80,
+        "dailyWeekend": 80,
+        "weekly": 560,
+        "subjects": {
+          "English": {
+            "workday": 30,
+            "weekend": 60,
+            "weekly": 270
+          },
+          "Chinese": {
+            "workday": 30,
+            "weekend": 20,
+            "weekly": 190
+          },
+          "Math": {
+            "workday": 20,
+            "weekend": 0,
+            "weekly": 100
+          }
+        }
+      },
+      "todayMinutes": 0,
+      "weekMinutes": 0,
+      "monthBooks": 0,
+      "dailyRecords": {
+        "2026-06-19": {
+          "todayMinutes": 40,
+          "weekMinutes": 40,
+          "monthBooks": 0
+        },
+        "2026-06-20": {
+          "todayMinutes": 39,
+          "weekMinutes": 79,
+          "monthBooks": 0
+        },
+        "2026-06-21": {
+          "todayMinutes": 88,
+          "weekMinutes": 167,
+          "monthBooks": 0
+        }
+      },
+      "readingSessions": [
+        {
+          "minutes": 23,
+          "subject": "English",
+          "recordDate": "2026-06-19",
+          "recordedAt": "2026-06-19T12:27:35.027111+00:00"
+        },
+        {
+          "minutes": 9,
+          "subject": "English",
+          "recordDate": "2026-06-19",
+          "recordedAt": "2026-06-19T12:38:03.559946+00:00"
+        },
+        {
+          "minutes": 8,
+          "subject": "English",
+          "recordDate": "2026-06-19",
+          "recordedAt": "2026-06-19T12:46:03.702152+00:00"
+        },
+        {
+          "minutes": 2,
+          "subject": "English",
+          "recordDate": "2026-06-20",
+          "recordedAt": "2026-06-20T00:51:10.140962+00:00"
+        },
+        {
+          "minutes": 9,
+          "subject": "English",
+          "recordDate": "2026-06-20",
+          "recordedAt": "2026-06-20T00:59:33.853037+00:00"
+        },
+        {
+          "minutes": 28,
+          "subject": "English",
+          "recordDate": "2026-06-20",
+          "recordedAt": "2026-06-20T01:28:01.345908+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "English",
+          "recordDate": "2026-06-21",
+          "recordedAt": "2026-06-21T03:31:53.440015+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "English",
+          "recordDate": "2026-06-21",
+          "recordedAt": "2026-06-21T03:32:53.458310+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "English",
+          "recordDate": "2026-06-21",
+          "recordedAt": "2026-06-21T03:33:53.640907+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "English",
+          "recordDate": "2026-06-21",
+          "recordedAt": "2026-06-21T03:34:53.959416+00:00"
+        },
+        {
+          "minutes": 22,
+          "subject": "English",
+          "recordDate": "2026-06-21",
+          "recordedAt": "2026-06-21T03:57:36.190764+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "English",
+          "recordDate": "2026-06-21",
+          "recordedAt": "2026-06-21T03:57:53.823652+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "English",
+          "recordDate": "2026-06-21",
+          "recordedAt": "2026-06-21T03:58:53.292442+00:00"
+        },
+        {
+          "minutes": 3,
+          "subject": "English",
+          "recordDate": "2026-06-21",
+          "recordedAt": "2026-06-21T04:02:00.184336+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "English",
+          "recordDate": "2026-06-21",
+          "recordedAt": "2026-06-21T04:03:02.552149+00:00"
+        },
+        {
+          "minutes": 43,
+          "subject": "English",
+          "recordDate": "2026-06-21",
+          "recordedAt": "2026-06-21T04:49:51.163544+00:00"
+        },
+        {
+          "minutes": 13,
+          "subject": "English",
+          "recordDate": "2026-06-21",
+          "recordedAt": "2026-06-21T05:05:12.584123+00:00"
+        }
+      ]
+    }
+  ]
+}
