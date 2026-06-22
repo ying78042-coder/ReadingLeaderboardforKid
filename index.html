@@ -237,6 +237,45 @@
       </section>
     </div>
 
+    <div id="record-modal" class="modal-backdrop" hidden>
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="record-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Update record</p>
+            <h2 id="record-modal-title">Reading minutes</h2>
+          </div>
+          <button type="button" id="close-record-modal" class="icon-button" aria-label="Close record dialog">×</button>
+        </div>
+
+        <form id="record-modal-form" class="modal-form">
+          <input id="record-reader-name" type="hidden" />
+          <label>
+            Date
+            <input id="record-date" type="date" required />
+          </label>
+          <div class="subject-record-grid" aria-label="Selected reader subject record">
+            <label>
+              English
+              <input id="record-english-minutes" type="number" min="0" max="720" step="1" required />
+            </label>
+            <label>
+              Chinese
+              <input id="record-chinese-minutes" type="number" min="0" max="720" step="1" required />
+            </label>
+            <label>
+              Math
+              <input id="record-math-minutes" type="number" min="0" max="720" step="1" required />
+            </label>
+          </div>
+          <p id="record-modal-message" class="modal-message" aria-live="polite"></p>
+          <div class="form-actions">
+            <button type="button" id="cancel-record-update" class="secondary-button">Cancel</button>
+            <button type="submit" class="primary-button">Save record</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
     <script src="./app.js"></script>
   </body>
 </html>
