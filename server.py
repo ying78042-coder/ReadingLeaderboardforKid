@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import os
 import socket
+import threading
 import time
 import uuid
 from urllib.parse import unquote
@@ -15,6 +16,7 @@ RECORDS_FILE = DATA_DIR / "readers.json"
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "5173"))
 SUBJECTS = ("English", "Chinese", "Math")
+RECORDS_LOCK = threading.RLock()
 
 
 def empty_records():
@@ -22,6 +24,11 @@ def empty_records():
 
 
 def load_records():
+    with RECORDS_LOCK:
+        return load_records_unlocked()
+
+
+def load_records_unlocked():
     if not RECORDS_FILE.exists():
         return empty_records()
 
@@ -44,8 +51,23 @@ def load_records():
 
 
 def save_records(data):
+    with RECORDS_LOCK:
+        save_records_unlocked(data)
+
+
+def save_records_unlocked(data):
     DATA_DIR.mkdir(exist_ok=True)
-    RECORDS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    temporary_file = RECORDS_FILE.with_suffix(".json.tmp")
+    temporary_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    temporary_file.replace(RECORDS_FILE)
+
+
+def update_records(mutator):
+    with RECORDS_LOCK:
+        records = load_records_unlocked()
+        result = mutator(records)
+        save_records_unlocked(records)
+        return result if result is not None else records
 
 
 def normalize_name(name):
@@ -216,39 +238,40 @@ class ReadingLeaderboardHandler(SimpleHTTPRequestHandler):
             self.send_json(400, {"error": "Name is required"})
             return
 
-        records = load_records()
-        if any(normalize_name(existing.get("name")) == normalize_name(name) for existing in records["readers"]):
-            self.send_json(409, {"error": "Name already exists"})
-            return
+        with RECORDS_LOCK:
+            records = load_records_unlocked()
+            if any(normalize_name(existing.get("name")) == normalize_name(name) for existing in records["readers"]):
+                self.send_json(409, {"error": "Name already exists"})
+                return
 
-        reader_id = str(reader.get("id", "")).strip() or f"reader-{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}"
-        reader["name"] = name
-        reader["id"] = reader_id
-        reader.pop("favoriteBook", None)
-        incoming_goals = reader.get("goals", {}) if isinstance(reader.get("goals"), dict) else {}
-        subject_goals = clean_subject_goals(incoming_goals.get("subjects"))
-        reader["goals"] = {
-            **summarize_subject_goals(subject_goals),
-            "subjects": subject_goals,
-        }
-        reader["todayMinutes"] = clean_number(reader.get("todayMinutes"), 0)
-        reader["weekMinutes"] = clean_number(reader.get("weekMinutes"), 0)
-        reader["monthBooks"] = clean_number(reader.get("monthBooks"), 0)
-        record_date = clean_date_key(reader.get("recordDate"))
-        reader.pop("recordDate", None)
-        update_daily_record(
-            reader,
-            record_date,
-            reader["todayMinutes"],
-            reader["weekMinutes"],
-            reader["monthBooks"],
-        )
-        refresh_week_records(reader, record_date)
-        sync_top_level_if_current_date(reader, record_date)
+            reader_id = str(reader.get("id", "")).strip() or f"reader-{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}"
+            reader["name"] = name
+            reader["id"] = reader_id
+            reader.pop("favoriteBook", None)
+            incoming_goals = reader.get("goals", {}) if isinstance(reader.get("goals"), dict) else {}
+            subject_goals = clean_subject_goals(incoming_goals.get("subjects"))
+            reader["goals"] = {
+                **summarize_subject_goals(subject_goals),
+                "subjects": subject_goals,
+            }
+            reader["todayMinutes"] = clean_number(reader.get("todayMinutes"), 0)
+            reader["weekMinutes"] = clean_number(reader.get("weekMinutes"), 0)
+            reader["monthBooks"] = clean_number(reader.get("monthBooks"), 0)
+            record_date = clean_date_key(reader.get("recordDate"))
+            reader.pop("recordDate", None)
+            update_daily_record(
+                reader,
+                record_date,
+                reader["todayMinutes"],
+                reader["weekMinutes"],
+                reader["monthBooks"],
+            )
+            refresh_week_records(reader, record_date)
+            sync_top_level_if_current_date(reader, record_date)
 
-        records["readers"].append(reader)
-        records["currentReaderId"] = reader_id
-        save_records(records)
+            records["readers"].append(reader)
+            records["currentReaderId"] = reader_id
+            save_records_unlocked(records)
         self.send_json(200, records)
 
     def add_reading_session(self):
@@ -272,29 +295,30 @@ class ReadingLeaderboardHandler(SimpleHTTPRequestHandler):
 
         record_date = clean_date_key(session.get("recordDate"))
         subject = clean_subject(session.get("subject"))
-        records = load_records()
-        for reader in records["readers"]:
-            if normalize_name(reader.get("name")) == normalized_name:
-                daily_record = reader.setdefault("dailyRecords", {}).setdefault(
-                    record_date,
-                    {"todayMinutes": 0, "weekMinutes": 0, "monthBooks": clean_number(reader.get("monthBooks"), 0)},
-                )
-                daily_record["todayMinutes"] = clean_number(daily_record.get("todayMinutes"), 0) + minutes
-                daily_record["monthBooks"] = clean_number(daily_record.get("monthBooks"), clean_number(reader.get("monthBooks"), 0))
-                refresh_week_records(reader, record_date)
-                sync_top_level_if_current_date(reader, record_date)
-                reader.setdefault("readingSessions", []).append(
-                    {
-                        "minutes": minutes,
-                        "subject": subject,
-                        "recordDate": record_date,
-                        "recordedAt": datetime.now(timezone.utc).isoformat(),
-                    }
-                )
-                records["currentReaderId"] = reader.get("id")
-                save_records(records)
-                self.send_json(200, records)
-                return
+        with RECORDS_LOCK:
+            records = load_records_unlocked()
+            for reader in records["readers"]:
+                if normalize_name(reader.get("name")) == normalized_name:
+                    daily_record = reader.setdefault("dailyRecords", {}).setdefault(
+                        record_date,
+                        {"todayMinutes": 0, "weekMinutes": 0, "monthBooks": clean_number(reader.get("monthBooks"), 0)},
+                    )
+                    daily_record["todayMinutes"] = clean_number(daily_record.get("todayMinutes"), 0) + minutes
+                    daily_record["monthBooks"] = clean_number(daily_record.get("monthBooks"), clean_number(reader.get("monthBooks"), 0))
+                    refresh_week_records(reader, record_date)
+                    sync_top_level_if_current_date(reader, record_date)
+                    reader.setdefault("readingSessions", []).append(
+                        {
+                            "minutes": minutes,
+                            "subject": subject,
+                            "recordDate": record_date,
+                            "recordedAt": datetime.now(timezone.utc).isoformat(),
+                        }
+                    )
+                    records["currentReaderId"] = reader.get("id")
+                    save_records_unlocked(records)
+                    self.send_json(200, records)
+                    return
 
         self.send_json(404, {"error": "Reader not found"})
 
@@ -321,25 +345,26 @@ class ReadingLeaderboardHandler(SimpleHTTPRequestHandler):
             return
 
         record_date = clean_date_key(update.get("recordDate"))
-        records = load_records()
-        for reader in records["readers"]:
-            if normalize_name(reader.get("name")) == normalized_name:
-                today_minutes = clean_number(update.get("todayMinutes"), 0)
-                week_minutes = clean_number(update.get("weekMinutes"), 0)
-                month_books = clean_number(update.get("monthBooks"), 0)
-                update_daily_record(
-                    reader,
-                    record_date,
-                    today_minutes,
-                    week_minutes,
-                    month_books,
-                )
-                refresh_week_records(reader, record_date)
-                sync_top_level_if_current_date(reader, record_date)
-                records["currentReaderId"] = reader.get("id")
-                save_records(records)
-                self.send_json(200, records)
-                return
+        with RECORDS_LOCK:
+            records = load_records_unlocked()
+            for reader in records["readers"]:
+                if normalize_name(reader.get("name")) == normalized_name:
+                    today_minutes = clean_number(update.get("todayMinutes"), 0)
+                    week_minutes = clean_number(update.get("weekMinutes"), 0)
+                    month_books = clean_number(update.get("monthBooks"), 0)
+                    update_daily_record(
+                        reader,
+                        record_date,
+                        today_minutes,
+                        week_minutes,
+                        month_books,
+                    )
+                    refresh_week_records(reader, record_date)
+                    sync_top_level_if_current_date(reader, record_date)
+                    records["currentReaderId"] = reader.get("id")
+                    save_records_unlocked(records)
+                    self.send_json(200, records)
+                    return
 
         self.send_json(404, {"error": "Reader not found"})
 
@@ -358,21 +383,22 @@ class ReadingLeaderboardHandler(SimpleHTTPRequestHandler):
             return
 
         incoming_goals = update.get("goals", {}) if isinstance(update.get("goals"), dict) else {}
-        records = load_records()
-        for reader in records["readers"]:
-            if normalize_name(reader.get("name")) == normalized_name:
-                existing_goals = reader.get("goals") if isinstance(reader.get("goals"), dict) else {}
-                subject_goals = clean_subject_goals(
-                    incoming_goals.get("subjects", existing_goals.get("subjects"))
-                )
-                reader["goals"] = {
-                    **summarize_subject_goals(subject_goals),
-                    "subjects": subject_goals,
-                }
-                records["currentReaderId"] = reader.get("id")
-                save_records(records)
-                self.send_json(200, records)
-                return
+        with RECORDS_LOCK:
+            records = load_records_unlocked()
+            for reader in records["readers"]:
+                if normalize_name(reader.get("name")) == normalized_name:
+                    existing_goals = reader.get("goals") if isinstance(reader.get("goals"), dict) else {}
+                    subject_goals = clean_subject_goals(
+                        incoming_goals.get("subjects", existing_goals.get("subjects"))
+                    )
+                    reader["goals"] = {
+                        **summarize_subject_goals(subject_goals),
+                        "subjects": subject_goals,
+                    }
+                    records["currentReaderId"] = reader.get("id")
+                    save_records_unlocked(records)
+                    self.send_json(200, records)
+                    return
 
         self.send_json(404, {"error": "Reader not found"})
 
@@ -382,8 +408,9 @@ class ReadingLeaderboardHandler(SimpleHTTPRequestHandler):
                 self.send_json(403, {"error": "Reset is only allowed from the server"})
                 return
 
-            records = empty_records()
-            save_records(records)
+            with RECORDS_LOCK:
+                records = empty_records()
+                save_records_unlocked(records)
             self.send_json(200, records)
             return
 
@@ -396,14 +423,15 @@ class ReadingLeaderboardHandler(SimpleHTTPRequestHandler):
             self.send_json(400, {"error": "Reader id is required"})
             return
 
-        records = load_records()
-        records["readers"] = [
-            reader for reader in records["readers"] if str(reader.get("id")) != reader_id
-        ]
-        if records["currentReaderId"] == reader_id:
-            records["currentReaderId"] = records["readers"][-1]["id"] if records["readers"] else None
+        with RECORDS_LOCK:
+            records = load_records_unlocked()
+            records["readers"] = [
+                reader for reader in records["readers"] if str(reader.get("id")) != reader_id
+            ]
+            if records["currentReaderId"] == reader_id:
+                records["currentReaderId"] = records["readers"][-1]["id"] if records["readers"] else None
 
-        save_records(records)
+            save_records_unlocked(records)
         self.send_json(200, records)
 
 
