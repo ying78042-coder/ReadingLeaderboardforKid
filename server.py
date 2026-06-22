@@ -95,6 +95,14 @@ def clean_subject(value):
     return subject if subject in SUBJECTS else "English"
 
 
+def clean_subject_minutes(value):
+    incoming = value if isinstance(value, dict) else {}
+    return {
+        subject: max(0, clean_number(incoming.get(subject), 0))
+        for subject in SUBJECTS
+    }
+
+
 def clean_subject_goals(value):
     incoming = value if isinstance(value, dict) else {}
     subject_goals = {}
@@ -127,6 +135,38 @@ def update_daily_record(reader, record_date, today_minutes, week_minutes, month_
         "weekMinutes": clean_number(week_minutes, 0),
         "monthBooks": clean_number(month_books, 0),
     }
+
+
+def replace_subject_record(reader, record_date, subject_minutes):
+    reader["readingSessions"] = [
+        session
+        for session in reader.get("readingSessions", [])
+        if session.get("recordDate") != record_date
+    ]
+
+    for subject in SUBJECTS:
+        minutes = clean_number(subject_minutes.get(subject), 0)
+        if minutes <= 0:
+            continue
+
+        reader.setdefault("readingSessions", []).append(
+            {
+                "minutes": minutes,
+                "subject": subject,
+                "recordDate": record_date,
+                "recordedAt": datetime.now(timezone.utc).isoformat(),
+                "source": "manual",
+            }
+        )
+
+    daily_record = reader.setdefault("dailyRecords", {}).setdefault(
+        record_date,
+        {"todayMinutes": 0, "weekMinutes": 0, "monthBooks": clean_number(reader.get("monthBooks"), 0)},
+    )
+    daily_record["todayMinutes"] = sum(subject_minutes.values())
+    daily_record["monthBooks"] = clean_number(daily_record.get("monthBooks"), clean_number(reader.get("monthBooks"), 0))
+    refresh_week_records(reader, record_date)
+    sync_top_level_if_current_date(reader, record_date)
 
 
 def repair_records(records):
@@ -349,18 +389,25 @@ class ReadingLeaderboardHandler(SimpleHTTPRequestHandler):
             records = load_records_unlocked()
             for reader in records["readers"]:
                 if normalize_name(reader.get("name")) == normalized_name:
-                    today_minutes = clean_number(update.get("todayMinutes"), 0)
-                    week_minutes = clean_number(update.get("weekMinutes"), 0)
-                    month_books = clean_number(update.get("monthBooks"), 0)
-                    update_daily_record(
-                        reader,
-                        record_date,
-                        today_minutes,
-                        week_minutes,
-                        month_books,
-                    )
-                    refresh_week_records(reader, record_date)
-                    sync_top_level_if_current_date(reader, record_date)
+                    if isinstance(update.get("subjectMinutes"), dict):
+                        replace_subject_record(
+                            reader,
+                            record_date,
+                            clean_subject_minutes(update.get("subjectMinutes")),
+                        )
+                    else:
+                        today_minutes = clean_number(update.get("todayMinutes"), 0)
+                        week_minutes = clean_number(update.get("weekMinutes"), 0)
+                        month_books = clean_number(update.get("monthBooks"), 0)
+                        update_daily_record(
+                            reader,
+                            record_date,
+                            today_minutes,
+                            week_minutes,
+                            month_books,
+                        )
+                        refresh_week_records(reader, record_date)
+                        sync_top_level_if_current_date(reader, record_date)
                     records["currentReaderId"] = reader.get("id")
                     save_records_unlocked(records)
                     self.send_json(200, records)
