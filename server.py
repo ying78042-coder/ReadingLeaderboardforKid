@@ -251,6 +251,20 @@ class ReadingLeaderboardHandler(SimpleHTTPRequestHandler):
         self.wfile.write(payload)
 
     def do_GET(self):
+        if self.path == "/api/server-info":
+            is_server = is_loopback_address(self.client_address[0])
+            port = self.server.server_address[1]
+            lan_ip = get_lan_ip()
+            self.send_json(
+                200,
+                {
+                    "isServer": is_server,
+                    "localUrl": f"http://127.0.0.1:{port}/",
+                    "networkUrl": f"http://{lan_ip}:{port}/" if lan_ip else None,
+                },
+            )
+            return
+
         if self.path == "/api/readers":
             self.send_json(200, load_records())
             return

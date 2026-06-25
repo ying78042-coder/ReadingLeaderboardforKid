@@ -18,6 +18,11 @@
           <p>Reading Club</p>
         </div>
 
+        <aside id="server-url-card" class="server-url-card" hidden>
+          <span>Server URL</span>
+          <strong id="server-url-text">http://127.0.0.1:5173/</strong>
+        </aside>
+
         <div class="intro-copy">
           <h1 id="page-title">Join the reading leaderboard</h1>
           <p>Add your reader, choose goals, and see today’s climb.</p>
@@ -273,6 +278,47 @@
             <button type="submit" class="primary-button">Save record</button>
           </div>
         </form>
+      </section>
+    </div>
+
+    <div id="week-record-modal" class="modal-backdrop" hidden>
+      <section class="modal-card wide-modal-card" role="dialog" aria-modal="true" aria-labelledby="week-record-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Weekly subject record</p>
+            <h2 id="week-record-modal-title">Daily records</h2>
+          </div>
+          <button type="button" id="close-week-record-modal" class="icon-button" aria-label="Close weekly record dialog">×</button>
+        </div>
+
+        <div class="week-record-content">
+          <div class="week-record-tools">
+            <input id="week-record-reader-id" type="hidden" />
+            <label>
+              Week
+              <input id="week-record-week" type="week" />
+            </label>
+          </div>
+
+          <div id="week-subject-summary" class="week-subject-summary" aria-label="Weekly subject reading percentages"></div>
+
+          <div id="week-record-chart" class="week-record-chart" aria-label="Daily subject goal percentage histograms"></div>
+
+          <div class="week-record-table-wrap">
+            <table class="week-record-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>English</th>
+                  <th>Chinese</th>
+                  <th>Math</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="week-record-body"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
     </div>
 

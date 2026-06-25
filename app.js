@@ -1,4 +1,5 @@
 const API_URL = "/api/readers";
+const SERVER_INFO_URL = "/api/server-info";
 const SUBJECTS = ["English", "Chinese", "Math"];
 
 const fallbackState = {
@@ -8,6 +9,8 @@ const fallbackState = {
 
 const form = document.querySelector("#reader-form");
 const resetButton = document.querySelector("#reset-button");
+const serverUrlCard = document.querySelector("#server-url-card");
+const serverUrlText = document.querySelector("#server-url-text");
 const leaderboardList = document.querySelector("#leaderboard-list");
 const readerRank = document.querySelector("#reader-rank");
 const progressDate = document.querySelector("#progress-date");
@@ -28,6 +31,13 @@ const recordModalForm = document.querySelector("#record-modal-form");
 const closeRecordModalButton = document.querySelector("#close-record-modal");
 const cancelRecordUpdateButton = document.querySelector("#cancel-record-update");
 const recordModalMessage = document.querySelector("#record-modal-message");
+const weekRecordModal = document.querySelector("#week-record-modal");
+const closeWeekRecordModalButton = document.querySelector("#close-week-record-modal");
+const weekRecordReaderId = document.querySelector("#week-record-reader-id");
+const weekRecordWeek = document.querySelector("#week-record-week");
+const weekSubjectSummary = document.querySelector("#week-subject-summary");
+const weekRecordChart = document.querySelector("#week-record-chart");
+const weekRecordBody = document.querySelector("#week-record-body");
 
 const fields = {
   name: document.querySelector("#reader-name"),
@@ -107,6 +117,47 @@ function getLocalDateKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+function getDateFromKey(dateKey) {
+  return new Date(`${dateKey}T00:00:00`);
+}
+
+function getWeekStartDate(dateKey) {
+  const date = getDateFromKey(dateKey);
+  const day = date.getDay() || 7;
+  date.setDate(date.getDate() - day + 1);
+  return date;
+}
+
+function getIsoWeekValue(dateKey = selectedDateKey) {
+  const date = getDateFromKey(dateKey);
+  date.setDate(date.getDate() + 4 - (date.getDay() || 7));
+  const yearStart = new Date(date.getFullYear(), 0, 1);
+  const week = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+  return `${date.getFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function getDateKeyFromWeekValue(weekValue, dayOffset = 0) {
+  const match = /^(\d{4})-W(\d{2})$/.exec(weekValue);
+  if (!match) return getLocalDateKey(getWeekStartDate(selectedDateKey));
+
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  const date = new Date(year, 0, 1 + (week - 1) * 7);
+  const day = date.getDay() || 7;
+  if (day <= 4) {
+    date.setDate(date.getDate() - day + 1);
+  } else {
+    date.setDate(date.getDate() + 8 - day);
+  }
+  date.setDate(date.getDate() + dayOffset);
+  return getLocalDateKey(date);
+}
+
+function formatShortDate(dateKey) {
+  const date = getDateFromKey(dateKey);
+  return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
 function getDailyRecord(reader, dateKey = selectedDateKey) {
   return reader?.dailyRecords?.[dateKey] ?? null;
 }
@@ -151,6 +202,22 @@ function getCurrentReader() {
 function clampPercent(value, goal) {
   if (!goal) return 0;
   return Math.min(100, Math.round((value / goal) * 100));
+}
+
+function getProgressTone(value, goal) {
+  if (!goal || value <= 0) return "empty";
+
+  const percent = (value / goal) * 100;
+  if (percent > 100) return "over";
+  if (percent >= 100) return "complete";
+  if (percent >= 75) return "strong";
+  if (percent >= 40) return "steady";
+  return "low";
+}
+
+function updateMeter(meter, value, goal) {
+  meter.style.width = `${clampPercent(value, goal)}%`;
+  meter.dataset.progressTone = getProgressTone(value, goal);
 }
 
 function readNumber(field, fallback) {
@@ -359,6 +426,19 @@ function getDailySubjectMinutes(reader, dateKey = selectedDateKey) {
   return getSubjectTotals(reader, dateKey).daily;
 }
 
+function getWeekDailySubjectRows(reader, weekValue) {
+  return Array.from({ length: 7 }, (_, dayOffset) => {
+    const dateKey = getDateKeyFromWeekValue(weekValue, dayOffset);
+    const totals = getDailySubjectMinutes(reader, dateKey);
+    return {
+      dateKey,
+      label: formatShortDate(dateKey),
+      totals,
+      total: sumSubjectTotals(totals),
+    };
+  });
+}
+
 function readSubjectMinutes(source) {
   return Object.fromEntries(
     SUBJECTS.map((subject) => [
@@ -385,8 +465,8 @@ function updateProgress(reader = getCurrentReader(), dateKey = selectedDateKey) 
   progress.dailyText.textContent = `${today} / ${dailyGoal} min`;
   progress.weeklyText.textContent = `${weekly} / ${weeklyGoal} min`;
 
-  progress.dailyMeter.style.width = `${clampPercent(today, dailyGoal)}%`;
-  progress.weeklyMeter.style.width = `${clampPercent(weekly, weeklyGoal)}%`;
+  updateMeter(progress.dailyMeter, today, dailyGoal);
+  updateMeter(progress.weeklyMeter, weekly, weeklyGoal);
 }
 
 function updateRankPill() {
@@ -430,10 +510,20 @@ function updateLeaderboard() {
     place.textContent = index + 1;
 
     const details = document.createElement("span");
+    details.className = "reader-details";
     const name = document.createElement("span");
     name.className = "reader-name";
     name.textContent = reader.name;
-    details.append(name);
+
+    const weekRecordButton = document.createElement("button");
+    weekRecordButton.className = "week-record-button";
+    weekRecordButton.type = "button";
+    weekRecordButton.dataset.readerId = reader.id;
+    weekRecordButton.setAttribute("aria-label", `View weekly subject records for ${reader.name}`);
+    weekRecordButton.title = `View weekly subject records for ${reader.name}`;
+    weekRecordButton.textContent = "Week";
+
+    details.append(name, weekRecordButton);
 
     const score = document.createElement("span");
     score.className = "score";
@@ -528,16 +618,20 @@ function closeGoalsModal() {
   goalsModalMessage.textContent = "";
 }
 
+function fillRecordModalForDate(reader, dateKey) {
+  recordModalFields.date.value = dateKey;
+  const subjectMinutes = getDailySubjectMinutes(reader, dateKey);
+  SUBJECTS.forEach((subject) => {
+    recordModalFields.subjectMinutes[subject].value = subjectMinutes[subject];
+  });
+}
+
 function openRecordModal(reader) {
   state.currentReaderId = reader.id;
   render();
 
   recordModalFields.name.value = reader.name;
-  recordModalFields.date.value = selectedDateKey;
-  const subjectMinutes = getDailySubjectMinutes(reader, selectedDateKey);
-  SUBJECTS.forEach((subject) => {
-    recordModalFields.subjectMinutes[subject].value = subjectMinutes[subject];
-  });
+  fillRecordModalForDate(reader, selectedDateKey);
   recordModalMessage.textContent = "";
   recordModal.hidden = false;
   recordModalFields.subjectMinutes.English.focus();
@@ -548,8 +642,155 @@ function closeRecordModal() {
   recordModalMessage.textContent = "";
 }
 
+function renderWeekRecordTable() {
+  const reader = state.readers.find((item) => item.id === weekRecordReaderId.value);
+  if (!reader || !weekRecordWeek.value) return;
+
+  const rows = getWeekDailySubjectRows(reader, weekRecordWeek.value);
+  renderWeekSubjectSummary(reader, rows);
+  renderWeekRecordChart(reader, rows);
+
+  weekRecordBody.innerHTML = "";
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    const values = [
+      row.label,
+      `${row.totals.English} min`,
+      `${row.totals.Chinese} min`,
+      `${row.totals.Math} min`,
+      `${row.total} min`,
+    ];
+
+    values.forEach((value, index) => {
+      const cell = document.createElement(index === 0 ? "th" : "td");
+      cell.textContent = value;
+      tr.append(cell);
+    });
+
+    weekRecordBody.append(tr);
+  });
+}
+
+function renderWeekSubjectSummary(reader, rows) {
+  weekSubjectSummary.innerHTML = "";
+  const goals = getSubjectGoals(reader);
+
+  SUBJECTS.forEach((subject) => {
+    const weeklyRead = rows.reduce((total, row) => total + row.totals[subject], 0);
+    const weeklyGoal = goals[subject].workday * 5 + goals[subject].weekend * 2;
+    const weeklyPercent = weeklyGoal ? Math.round((weeklyRead / weeklyGoal) * 100) : 0;
+
+    const item = document.createElement("article");
+    item.className = "week-subject-summary-item";
+
+    const header = document.createElement("div");
+    header.className = "week-subject-summary-header";
+    const name = document.createElement("strong");
+    name.textContent = subject;
+    const value = document.createElement("span");
+    value.textContent = `${weeklyRead} / ${weeklyGoal} min (${weeklyPercent}%)`;
+    header.append(name, value);
+
+    const meter = document.createElement("div");
+    meter.className = "week-subject-summary-meter";
+    const fill = document.createElement("span");
+    updateMeter(fill, weeklyRead, weeklyGoal);
+    meter.append(fill);
+
+    item.append(header, meter);
+    weekSubjectSummary.append(item);
+  });
+}
+
+function renderWeekRecordChart(reader, rows) {
+  weekRecordChart.innerHTML = "";
+  const goals = getSubjectGoals(reader);
+
+  SUBJECTS.forEach((subject) => {
+    const panel = document.createElement("article");
+    panel.className = `subject-histogram ${subject.toLowerCase()}-histogram`;
+
+    const title = document.createElement("h3");
+    title.textContent = subject;
+
+    const bars = document.createElement("div");
+    bars.className = "subject-histogram-bars";
+
+    rows.forEach((row) => {
+      const goal = isWeekend(row.dateKey) ? goals[subject].weekend : goals[subject].workday;
+      const minutes = row.totals[subject];
+      const percent = goal ? Math.round((minutes / goal) * 100) : 0;
+      const cappedPercent = Math.min(100, percent);
+
+      const item = document.createElement("div");
+      item.className = "subject-histogram-day";
+
+      const percentLabel = document.createElement("strong");
+      percentLabel.textContent = `${percent}%`;
+
+      const barTrack = document.createElement("div");
+      barTrack.className = "subject-histogram-track";
+      barTrack.title = `${row.label}: ${minutes} / ${goal} min (${percent}%)`;
+
+      const bar = document.createElement("span");
+      bar.className = "subject-histogram-fill";
+      bar.style.height = `${cappedPercent}%`;
+      bar.dataset.progressTone = getProgressTone(minutes, goal);
+      bar.setAttribute("aria-label", `${subject} ${row.label}: ${minutes} of ${goal} minutes`);
+      barTrack.append(bar);
+
+      const dayLabel = document.createElement("span");
+      dayLabel.className = "subject-histogram-day-label";
+      dayLabel.textContent = row.label;
+
+      const minutesLabel = document.createElement("span");
+      minutesLabel.className = "subject-histogram-minutes";
+      minutesLabel.textContent = `${minutes}/${goal}m`;
+
+      item.append(percentLabel, barTrack, dayLabel, minutesLabel);
+      bars.append(item);
+    });
+
+    panel.append(title, bars);
+    weekRecordChart.append(panel);
+  });
+}
+
+function openWeekRecordModal(reader) {
+  state.currentReaderId = reader.id;
+  render();
+
+  weekRecordReaderId.value = reader.id;
+  weekRecordWeek.value = getIsoWeekValue(selectedDateKey);
+  renderWeekRecordTable();
+  weekRecordModal.hidden = false;
+  weekRecordWeek.focus();
+}
+
+function closeWeekRecordModal() {
+  weekRecordModal.hidden = true;
+}
+
 function configureServerOnlyControls() {
   resetButton.hidden = !isServerSideBrowser();
+}
+
+async function loadServerInfo() {
+  if (!isServerSideBrowser() || !serverUrlCard || !serverUrlText) return;
+
+  try {
+    const response = await fetch(SERVER_INFO_URL);
+    if (!response.ok) throw new Error("Unable to load server info");
+
+    const info = await response.json();
+    if (!info.isServer) return;
+
+    serverUrlText.textContent = info.networkUrl || info.localUrl || window.location.origin;
+    serverUrlCard.hidden = false;
+  } catch {
+    serverUrlText.textContent = `${window.location.origin}/`;
+    serverUrlCard.hidden = false;
+  }
 }
 
 async function loadReaders() {
@@ -740,6 +981,13 @@ if (isServerSideBrowser()) {
 }
 
 leaderboardList.addEventListener("click", async (event) => {
+  const weekRecordButton = event.target.closest(".week-record-button");
+  if (weekRecordButton) {
+    const reader = state.readers.find((item) => item.id === weekRecordButton.dataset.readerId);
+    if (reader) openWeekRecordModal(reader);
+    return;
+  }
+
   const goalsButton = event.target.closest(".goals-reader-button");
   if (goalsButton) {
     const reader = state.readers.find((item) => item.id === goalsButton.dataset.readerId);
@@ -852,8 +1100,20 @@ recordModalForm.addEventListener("submit", async (event) => {
 
 closeRecordModalButton.addEventListener("click", closeRecordModal);
 cancelRecordUpdateButton.addEventListener("click", closeRecordModal);
+recordModalFields.date.addEventListener("change", () => {
+  const reader = state.readers.find((item) => item.name === recordModalFields.name.value);
+  if (!reader) return;
+
+  fillRecordModalForDate(reader, recordModalFields.date.value || selectedDateKey);
+});
 recordModal.addEventListener("click", (event) => {
   if (event.target === recordModal) closeRecordModal();
+});
+
+closeWeekRecordModalButton.addEventListener("click", closeWeekRecordModal);
+weekRecordWeek.addEventListener("change", renderWeekRecordTable);
+weekRecordModal.addEventListener("click", (event) => {
+  if (event.target === weekRecordModal) closeWeekRecordModal();
 });
 
 subjectModal.addEventListener("click", (event) => {
@@ -872,6 +1132,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !goalsModal.hidden) closeGoalsModal();
   if (event.key === "Escape" && !subjectModal.hidden) closeSubjectModal();
   if (event.key === "Escape" && !recordModal.hidden) closeRecordModal();
+  if (event.key === "Escape" && !weekRecordModal.hidden) closeWeekRecordModal();
 });
 
 if (progressDate) {
@@ -883,6 +1144,7 @@ if (progressDate) {
 }
 
 configureServerOnlyControls();
+loadServerInfo();
 loadReaders().catch(() => {
   leaderboardList.innerHTML = "";
   const emptyRow = document.createElement("li");
