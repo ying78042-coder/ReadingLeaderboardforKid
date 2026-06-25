@@ -6,15 +6,15 @@
       "name": "Alvin",
       "favoriteBook": "",
       "goals": {
-        "daily": 80,
-        "dailyWorkday": 80,
+        "daily": 90,
+        "dailyWorkday": 90,
         "dailyWeekend": 80,
-        "weekly": 560,
+        "weekly": 610,
         "subjects": {
           "English": {
-            "workday": 30,
+            "workday": 40,
             "weekend": 60,
-            "weekly": 270
+            "weekly": 320
           },
           "Chinese": {
             "workday": 30,
@@ -28,8 +28,8 @@
           }
         }
       },
-      "todayMinutes": 0,
-      "weekMinutes": 0,
+      "todayMinutes": 54,
+      "weekMinutes": 263,
       "monthBooks": 0,
       "dailyRecords": {
         "2026-06-19": {
@@ -45,6 +45,26 @@
         "2026-06-21": {
           "todayMinutes": 88,
           "weekMinutes": 167,
+          "monthBooks": 0
+        },
+        "2026-06-22": {
+          "todayMinutes": 69,
+          "weekMinutes": 69,
+          "monthBooks": 0
+        },
+        "2026-06-23": {
+          "todayMinutes": 81,
+          "weekMinutes": 150,
+          "monthBooks": 0
+        },
+        "2026-06-24": {
+          "todayMinutes": 59,
+          "weekMinutes": 209,
+          "monthBooks": 0
+        },
+        "2026-06-25": {
+          "todayMinutes": 54,
+          "weekMinutes": 263,
           "monthBooks": 0
         }
       },
@@ -150,6 +170,128 @@
           "subject": "English",
           "recordDate": "2026-06-21",
           "recordedAt": "2026-06-21T05:05:12.584123+00:00"
+        },
+        {
+          "minutes": 50,
+          "subject": "English",
+          "recordDate": "2026-06-22",
+          "recordedAt": "2026-06-23T00:44:20.539407+00:00",
+          "source": "manual"
+        },
+        {
+          "minutes": 19,
+          "subject": "Math",
+          "recordDate": "2026-06-22",
+          "recordedAt": "2026-06-23T00:44:20.539421+00:00",
+          "source": "manual"
+        },
+        {
+          "minutes": 50,
+          "subject": "English",
+          "recordDate": "2026-06-23",
+          "recordedAt": "2026-06-23T13:05:01.742203+00:00",
+          "source": "manual"
+        },
+        {
+          "minutes": 1,
+          "subject": "Chinese",
+          "recordDate": "2026-06-23",
+          "recordedAt": "2026-06-23T13:06:11.542492+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "Chinese",
+          "recordDate": "2026-06-23",
+          "recordedAt": "2026-06-23T13:07:11.849773+00:00"
+        },
+        {
+          "minutes": 7,
+          "subject": "Chinese",
+          "recordDate": "2026-06-23",
+          "recordedAt": "2026-06-23T13:14:42.618962+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "Chinese",
+          "recordDate": "2026-06-23",
+          "recordedAt": "2026-06-23T13:15:11.803493+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "Chinese",
+          "recordDate": "2026-06-23",
+          "recordedAt": "2026-06-23T13:16:12.079971+00:00"
+        },
+        {
+          "minutes": 11,
+          "subject": "Chinese",
+          "recordDate": "2026-06-23",
+          "recordedAt": "2026-06-23T13:27:24.098134+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "Math",
+          "recordDate": "2026-06-23",
+          "recordedAt": "2026-06-23T14:18:25.868049+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "Math",
+          "recordDate": "2026-06-23",
+          "recordedAt": "2026-06-23T14:19:26.086730+00:00"
+        },
+        {
+          "minutes": 6,
+          "subject": "Math",
+          "recordDate": "2026-06-23",
+          "recordedAt": "2026-06-23T14:25:56.768016+00:00"
+        },
+        {
+          "minutes": 1,
+          "subject": "Math",
+          "recordDate": "2026-06-23",
+          "recordedAt": "2026-06-23T14:26:25.717290+00:00"
+        },
+        {
+          "minutes": 38,
+          "subject": "English",
+          "recordDate": "2026-06-24",
+          "recordedAt": "2026-06-24T16:36:33.500307+00:00",
+          "source": "manual"
+        },
+        {
+          "minutes": 11,
+          "subject": "Chinese",
+          "recordDate": "2026-06-24",
+          "recordedAt": "2026-06-24T16:36:33.500328+00:00",
+          "source": "manual"
+        },
+        {
+          "minutes": 10,
+          "subject": "Math",
+          "recordDate": "2026-06-24",
+          "recordedAt": "2026-06-24T16:36:33.500335+00:00",
+          "source": "manual"
+        },
+        {
+          "minutes": 45,
+          "subject": "English",
+          "recordDate": "2026-06-25",
+          "recordedAt": "2026-06-25T13:36:04.287044+00:00",
+          "source": "manual"
+        },
+        {
+          "minutes": 1,
+          "subject": "Math",
+          "recordDate": "2026-06-25",
+          "recordedAt": "2026-06-25T13:36:04.287058+00:00",
+          "source": "manual"
+        },
+        {
+          "minutes": 8,
+          "subject": "Math",
+          "recordDate": "2026-06-25",
+          "recordedAt": "2026-06-25T13:42:11.720753+00:00"
         }
       ]
     }
